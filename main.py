@@ -287,7 +287,7 @@ class MultiPancakeVisualizer:
         self.root.after(self.anim_speed, self.animate_spatulas)
 
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = MultiPancakeVisualizer(root)
-    root.mainloop()
+
+root = tk.Tk()
+app = MultiPancakeVisualizer(root)
+root.mainloop()
