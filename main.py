@@ -90,13 +90,14 @@ class MultiPancakeVisualizer:
         self.algos = ["BFS", "DFS", "A*"]
         self.canvas_w = 320
         self.canvas_h = 350
-        self.anim_speed = 400  # ms per animation phase
+        self.anim_speed = 500  # ms per animation phase (slightly slower to read the flips)
 
         # State tracking
         self.current_stacks = {}
         self.paths = {}
         self.nodes_expanded = {}
         self.anim_steps = {}
+        self.phase = "spatula"  # tracks whether we are showing spatula or executing flip
 
         # UI Top Frame
         ui_frame = tk.Frame(root, padx=10, pady=10)
@@ -126,7 +127,9 @@ class MultiPancakeVisualizer:
             col_frame.pack(side=tk.LEFT, padx=10, fill=tk.BOTH, expand=True)
 
             self.label_vars[algo] = tk.StringVar(value=f"{algo}\nWaiting...")
-            tk.Label(col_frame, textvariable=self.label_vars[algo], font=("Arial", 11, "bold"), height=3).pack(pady=5)
+            # Height increased to 5, wraplength added to handle long DFS arrays
+            tk.Label(col_frame, textvariable=self.label_vars[algo], font=("Arial", 11, "bold"), height=5,
+                     wraplength=self.canvas_w - 20).pack(pady=5)
 
             c = tk.Canvas(col_frame, width=self.canvas_w, height=self.canvas_h, bg="white")
             c.pack(padx=10, pady=10)
@@ -145,18 +148,38 @@ class MultiPancakeVisualizer:
             if algo not in self.paths: continue
 
             step = self.anim_steps[algo]
-            total_flips = len(self.paths[algo])
+            path = self.paths[algo]
+            total_flips = len(path)
             nodes = self.nodes_expanded[algo]
 
-            if step >= total_flips:
+            # Format the array of flips to highlight the current one
+            formatted_path = []
+            for i, flip in enumerate(path):
+                if i == step and self.phase == "spatula":
+                    # Currently targeting this flip
+                    formatted_path.append(f"[{flip}]")
+                elif i == step - 1 and self.phase == "flip":
+                    # Just executed this flip
+                    formatted_path.append(f"[{flip}]")
+                else:
+                    formatted_path.append(str(flip))
+
+            path_str = ", ".join(formatted_path)
+
+            # Truncate string if it is absurdly long (DFS failsafe)
+            if len(path_str) > 120:
+                path_str = path_str[:115] + "..."
+
+            if step >= total_flips and self.phase == "spatula":
                 status_text = "✅ Done"
             else:
                 status_text = "🔄 Animating..."
 
             self.label_vars[algo].set(
-                f"{algo} Algorithm\n"
-                f"Flips: {step} / {total_flips} | Nodes: {nodes}\n"
-                f"{status_text}"
+                f"{algo} Algorithm | Nodes: {nodes}\n"
+                f"Flips Sequence ({total_flips} total):\n"
+                f"{path_str}\n"
+                f"Step {min(step + 1, total_flips)} / {total_flips} {status_text}"
             )
 
     def draw_stack(self, algo, spatula_index=None):
@@ -220,12 +243,14 @@ class MultiPancakeVisualizer:
             self.anim_steps[algo] = 0
 
         self.status_var.set("Animating...")
+        self.phase = "spatula"
         self.update_labels()
 
         # 2. Start global animation loop
         self.animate_spatulas()
 
     def animate_spatulas(self):
+        self.phase = "spatula"
         animating_any = False
 
         for algo in self.algos:
@@ -237,6 +262,8 @@ class MultiPancakeVisualizer:
                 flip_index = path[step]
                 self.draw_stack(algo, spatula_index=flip_index)
 
+        self.update_labels()
+
         if animating_any:
             self.root.after(self.anim_speed, self.animate_flips)
         else:
@@ -244,6 +271,7 @@ class MultiPancakeVisualizer:
             self.solve_btn.config(state=tk.NORMAL)
 
     def animate_flips(self):
+        self.phase = "flip"
         for algo in self.algos:
             step = self.anim_steps[algo]
             path = self.paths[algo]
@@ -253,7 +281,6 @@ class MultiPancakeVisualizer:
                 # Apply the flip
                 self.current_stacks[algo][:flip_index] = reversed(self.current_stacks[algo][:flip_index])
                 self.draw_stack(algo)
-
                 self.anim_steps[algo] += 1
 
         self.update_labels()
