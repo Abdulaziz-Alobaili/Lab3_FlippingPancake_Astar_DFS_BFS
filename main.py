@@ -177,7 +177,7 @@ class PancakeVisualizer:
             return
 
         self.solve_btn.config(state=tk.DISABLED)
-        self.status_var.set(f"Found {len(path)} flips. Nodes expanded: {nodes}. Animating...")
+        self.status_var.set(f"Did {len(path)} flips. Nodes expanded: {nodes}. Animating...")
 
         # Start animation loop
         self.animate_path(path, 0)
